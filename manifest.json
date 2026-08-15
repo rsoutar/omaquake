@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "id": "oma.quake",
+  "name": "Omaquake",
+  "version": "0.1.0",
+  "author": "rsoutar",
+  "license": "MIT",
+  "description": "USGS earthquake tracker with a local range filter and desktop alerts.",
+  "homepage": "https://github.com/rsoutar/omaquake",
+  "repository": "https://github.com/rsoutar/omaquake",
+  "keywords": [
+    "earthquake",
+    "seismic",
+    "usgs",
+    "monitor"
+  ],
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Omaquake",
+    "description": "Latest earthquakes with local range alerts",
+    "category": "Info",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "latitude": null,
+      "longitude": null,
+      "locationName": "",
+      "rangeKm": 1000,
+      "minMagnitude": 2.5,
+      "alertMagnitude": 6.0,
+      "scope": "global",
+      "refreshMinutes": 5,
+      "notify": true,
+      "units": "auto"
+    },
+    "schema": [
+      {
+        "key": "latitude",
+        "type": "number",
+        "label": "Latitude (blank to locate from your IP address)",
+        "min": -90,
+        "max": 90,
+        "defaultValue": null
+      },
+      {
+        "key": "longitude",
+        "type": "number",
+        "label": "Longitude (blank to locate from your IP address)",
+        "min": -180,
+        "max": 180,
+        "defaultValue": null
+      },
+      {
+        "key": "locationName",
+        "type": "string",
+        "label": "Location label",
+        "defaultValue": ""
+      },
+      {
+        "key": "rangeKm",
+        "type": "number",
+        "label": "Watch radius (kilometres)",
+        "min": 10,
+        "max": 20000,
+        "step": 10,
+        "defaultValue": 1000
+      },
+      {
+        "key": "minMagnitude",
+        "type": "number",
+        "label": "Minimum magnitude",
+        "min": 0,
+        "max": 10,
+        "step": 0.1,
+        "defaultValue": 2.5
+      },
+      {
+        "key": "alertMagnitude",
+        "type": "number",
+        "label": "Alert magnitude (urgent styling and notification)",
+        "min": 0,
+        "max": 10,
+        "step": 0.1,
+        "defaultValue": 6.0
+      },
+      {
+        "key": "scope",
+        "type": "string",
+        "label": "Scope: local (inside the radius) or global",
+        "defaultValue": "global"
+      },
+      {
+        "key": "refreshMinutes",
+        "type": "number",
+        "label": "Poll interval (minutes; 0.25 = 15s)",
+        "min": 0.25,
+        "max": 60,
+        "step": 0.25,
+        "defaultValue": 5
+      },
+      {
+        "key": "notify",
+        "type": "boolean",
+        "label": "Notify when a quake reaches the alert magnitude",
+        "defaultValue": true
+      },
+      {
+        "key": "units",
+        "type": "string",
+        "label": "Distance units: auto, km, or mi",
+        "defaultValue": "auto"
+      }
+    ]
+  }
+}
