@@ -155,6 +155,43 @@ test("notification and bar labels share magnitude formatting", () => {
   assert.equal(Model.barLabel(event, true), Model.QUAKE_GLYPH)
 })
 
+test("eventPageUrl restricts URLs to the exact HTTPS USGS origin", () => {
+  const event = Model.parseFeature(feature("us1", 6.4, 121, 14.5, {
+    url: "https://earthquake.usgs.gov/earthquakes/eventpage/us1"
+  }))
+  assert.equal(Model.eventPageUrl(event), "https://earthquake.usgs.gov/earthquakes/eventpage/us1")
+
+  const offOrigin = [
+    "http://earthquake.usgs.gov/earthquakes/eventpage/us1",
+    "https://evil.example.com/earthquakes/eventpage/us1",
+    "https://earthquake.usgs.gov.evil.com/x",
+    "https://earthquake.usgs.gov@evil.com/x",
+    "javascript:alert(1)",
+    "https://www.earthquake.usgs.gov/x"
+  ]
+  for (const url of offOrigin) {
+    assert.equal(Model.eventPageUrl(Model.parseFeature(feature("us2", 4.0, 0, 0, { url }))), "")
+  }
+  assert.equal(Model.eventPageUrl(null), "")
+  assert.equal(Model.eventPageUrl({ url: "" }), "")
+})
+
+test("shellQuote wraps values so bash treats them as one literal argument", () => {
+  const { execFileSync } = require("node:child_process")
+
+  assert.equal(Model.shellQuote("plain"), "'plain'")
+  assert.equal(Model.shellQuote("https://earthquake.usgs.gov/earthquakes/eventpage/us1"),
+    "'https://earthquake.usgs.gov/earthquakes/eventpage/us1'")
+
+  const url = "https://earthquake.usgs.gov/x'; rm -rf ~; echo '"
+  const quoted = Model.shellQuote(url)
+  const argv = execFileSync("bash", ["-lc", "printf '%s\\n' " + quoted]).toString().trim()
+  assert.equal(argv, url)
+
+  const plain = execFileSync("bash", ["-lc", "printf '%s\\n' " + Model.shellQuote("https://earthquake.usgs.gov/earthquakes/eventpage/us1")]).toString().trim()
+  assert.equal(plain, "https://earthquake.usgs.gov/earthquakes/eventpage/us1")
+})
+
 test("feedUrls use FDSN for local range and static GeoJSON for global", () => {
   const local = Model.feedUrls({
     scope: "local",
