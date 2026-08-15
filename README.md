@@ -12,6 +12,8 @@ and can raise a desktop notification.
 location from your IP address. Press **E** in the panel (or click the location
 label) to enter a city, `lat, lon`, and range.
 
+![Omaquake preview](preview.png)
+
 ## Install
 
 From this directory, during development:
@@ -19,14 +21,14 @@ From this directory, during development:
 ```bash
 ln -sfn "$(pwd)" ~/.config/omarchy/plugins/oma.quake
 omarchy-shell shell rescanPlugins
-omarchy plugin enable oma.quake --yes
+omarchy plugin enable oma.quake
 ```
 
-From a git remote, once published:
+From a git remote:
 
 ```bash
 omarchy plugin add https://github.com/rsoutar/omaquake
-omarchy plugin enable oma.quake --yes
+omarchy plugin enable oma.quake
 ```
 
 The widget lands in the right section of the bar by default. Move it with
@@ -61,7 +63,7 @@ They can also be edited from Setup → Plugins, or from the panel location edito
 
 ## Panel keys
 
-Hints for these sit at the bottom of the panel, the same way Flight Radar shows **R** / **S**.
+Hints for **R** / **S** / **G** sit at the bottom of the panel, the same way Flight Radar shows **R** / **S**.
 
 - **R** — refresh now
 - **S** — toggle settings (range, magnitude, alerts, units)
@@ -79,9 +81,10 @@ coordinates on OpenStreetMap.
 
 ## Data
 
-Events come from the USGS GeoJSON summary feeds and, for a local radius, the
+Events come from the USGS GeoJSON summary feeds and, for a local radius or a
+minimum magnitude below 2.5, the
 [FDSN Event API](https://earthquake.usgs.gov/fdsnws/event/1/). Feeds are public
-and require no key. Local-scope polls use the incremental `updatedafter`
+and require no key. FDSN polls use the incremental `updatedafter`
 parameter, asking only for events updated since the last successful fetch.
 USGS caches feed/API responses for 60 seconds, so the next poll is never
 scheduled sooner than that (or the `Expires` header), whatever the user's
