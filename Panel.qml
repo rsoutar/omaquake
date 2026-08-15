@@ -335,7 +335,7 @@ Panel {
     var text = Model.notificationText(event, useImperial, Date.now())
     var args = ["omarchy-notification-send", "--app-name", "quake", "-u", "critical", "-g", Model.QUAKE_GLYPH]
     var url = Model.eventPageUrl(event)
-    if (url) args.push("--exec", "omarchy-launch-browser " + url)
+    if (url) args.push("--exec", "omarchy-launch-browser " + Model.shellQuote(url))
     args.push(text.headline)
     if (text.body) args.push(text.body)
     notifyProc.running = false
@@ -353,7 +353,8 @@ Panel {
   function sendStatusNotification() {
     var text = Model.statusNotificationText(latest, events.length, useImperial, Date.now())
     var args = ["omarchy-notification-send", "--app-name", "quake", "-u", "low", "-g", Model.QUAKE_GLYPH]
-    if (latest && latest.url) args.push("--exec", "omarchy-launch-browser " + latest.url)
+    var url = Model.eventPageUrl(latest)
+    if (url) args.push("--exec", "omarchy-launch-browser " + Model.shellQuote(url))
     args.push(text.headline)
     if (text.body) args.push(text.body)
     notifyProc.running = false

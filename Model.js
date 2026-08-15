@@ -492,8 +492,20 @@ function tooltipText(event, offline) {
   return "M" + formatMagnitude(event.mag) + " · " + event.place
 }
 
+// The notification --exec string runs through bash -lc when clicked, so event
+// URLs are restricted to the exact HTTPS USGS origin and callers shell-quote
+// them before embedding. Anything else (http, foreign hosts, lookalikes) is
+// refused outright.
 function eventPageUrl(event) {
-  return event && event.url ? event.url : ""
+  var url = event && event.url ? String(event.url) : ""
+  if (!/^https:\/\/earthquake\.usgs\.gov\//.test(url)) return ""
+  return url
+}
+
+// Wrap a value in single quotes for insertion into a shell command string,
+// escaping embedded quotes, so bash treats it as one literal argument.
+function shellQuote(value) {
+  return "'" + String(value).replace(/'/g, "'\\''") + "'"
 }
 
 function mapsUrl(lat, lon) {
@@ -624,6 +636,7 @@ if (typeof module !== "undefined") {
     barLabel: barLabel,
     tooltipText: tooltipText,
     eventPageUrl: eventPageUrl,
+    shellQuote: shellQuote,
     mapsUrl: mapsUrl,
     parseLatLonText: parseLatLonText,
     parseGeoJs: parseGeoJs,
