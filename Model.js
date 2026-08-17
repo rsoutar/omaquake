@@ -77,9 +77,16 @@ function startTimeIso(nowMs) {
   return d.toISOString().replace(/\.\d{3}Z$/, "Z")
 }
 
+// Null when there is no meaningful timestamp. `Number(null)` is 0 and 0 is
+// finite, so a bare isFinite check turned "no previous poll" into the epoch
+// and sent `updatedafter=1970-01-01T00:00:00Z` — asking USGS for every event
+// on record instead of the intended day window. 0 is treated the same way:
+// callers use it to mean "never polled".
 function isoFromMs(ms) {
-  if (!isFinite(Number(ms))) return null
-  return new Date(Number(ms)).toISOString().replace(/\.\d{3}Z$/, "Z")
+  if (ms === undefined || ms === null || ms === "") return null
+  var parsed = Number(ms)
+  if (!isFinite(parsed) || parsed <= 0) return null
+  return new Date(parsed).toISOString().replace(/\.\d{3}Z$/, "Z")
 }
 
 // Split a `curl -i` response (headers then body) into status, headers, body.
