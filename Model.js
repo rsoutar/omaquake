@@ -210,6 +210,11 @@ function parseFeature(feature) {
   var time = Number(props.time)
   if (!isFinite(time)) return null
 
+  // USGS publishes events minutes to hours after the origin time; `updated`
+  // tracks when the event actually appeared (or was last revised) in the
+  // feed, and falls back to the origin time when absent.
+  var updated = Number(props.updated)
+
   var id = String(feature.id || props.code || "").replace(/^\s+|\s+$/g, "")
   if (!id) return null
 
@@ -219,6 +224,7 @@ function parseFeature(feature) {
     magType: String(props.magType || "m"),
     place: String(props.place || "Unknown location"),
     timeMs: time,
+    updatedMs: isFinite(updated) ? updated : time,
     lon: lon,
     lat: lat,
     depthKm: depth,
@@ -417,9 +423,13 @@ function magnitudeRole(mag) {
   return "urgent"
 }
 
+// Recency for alerts is judged by when USGS published/updated the event,
+// not the quake's origin time: publish lag routinely exceeds the window, and
+// gating on origin time would silently drop late-published alerts.
 function isRecentAlert(event, nowMs) {
   if (!event) return false
-  return (Number(nowMs) - event.timeMs) <= ALERT_WINDOW_MS
+  var publishedMs = isFinite(Number(event.updatedMs)) ? Number(event.updatedMs) : Number(event.timeMs)
+  return (Number(nowMs) - publishedMs) <= ALERT_WINDOW_MS
 }
 
 function activeAlert(events, alertMagnitude, nowMs) {
