@@ -13,6 +13,7 @@ function feature(id, mag, lon, lat, extras) {
       magType: "mw",
       place: extras.place || "29 km SW of Balangonan, Philippines",
       time: extras.time == null ? 1_700_000_000_000 : extras.time,
+      updated: extras.updated,
       url: extras.url || ("https://earthquake.usgs.gov/earthquakes/eventpage/" + id),
       tsunami: extras.tsunami || 0,
       felt: extras.felt
@@ -141,6 +142,34 @@ test("alertCandidates skip seen, stale, and out-of-range events", () => {
 
   assert.equal(Model.activeAlert([fresh], 6, now).id, "a")
   assert.equal(Model.activeAlert([stale], 6, now), null)
+})
+
+test("alerts gate on publish time so late-published quakes still notify", () => {
+  const now = 1_000_000_000
+  // USGS often publishes events after the origin-time alert window has
+  // closed; a fresh `updated` must still alert.
+  const latePublished = Model.parseFeature(feature("late", 6.5, 0.1, 0.1, {
+    time: now - 10 * 60 * 60 * 1000,
+    updated: now - 5 * 60 * 1000
+  }))
+  const staleRevision = Model.parseFeature(feature("stale", 6.5, 0.1, 0.1, {
+    time: now - 10 * 60 * 60 * 1000,
+    updated: now - Model.ALERT_WINDOW_MS - 1
+  }))
+  const noUpdated = Model.parseFeature(feature("fallback", 6.5, 0.1, 0.1, {
+    time: now - 60_000
+  }))
+
+  assert.equal(latePublished.updatedMs, now - 5 * 60 * 1000)
+  assert.equal(noUpdated.updatedMs, now - 60_000)
+  assert.equal(Model.isRecentAlert(latePublished, now), true)
+  assert.equal(Model.isRecentAlert(staleRevision, now), false)
+
+  assert.deepEqual(Model.alertCandidates([latePublished, staleRevision, noUpdated], {}, {
+    alertMagnitude: 6,
+    nowMs: now
+  }).map(event => event.id), ["late", "fallback"])
+  assert.equal(Model.activeAlert([staleRevision, latePublished], 6, now).id, "late")
 })
 
 test("notification and bar labels share magnitude formatting", () => {
