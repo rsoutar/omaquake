@@ -300,5 +300,24 @@ test("mergeFeed keeps prior events, prefers revisions, and prunes old ones", () 
   assert.equal(Model.mergeFeed(prev, [old], now).find((e) => e.id === "z"), undefined)
 })
 
+test("isoFromMs treats null and 0 as no previous poll", () => {
+  assert.equal(Model.isoFromMs(null), null)
+  assert.equal(Model.isoFromMs(undefined), null)
+  assert.equal(Model.isoFromMs(0), null)
+  assert.equal(Model.isoFromMs(""), null)
+  assert.equal(Model.isoFromMs("nonsense"), null)
+  assert.equal(Model.isoFromMs(Date.parse("2026-08-15T12:00:00Z")), "2026-08-15T12:00:00Z")
+})
+
+test("a poll with no prior timestamp asks for the day window, not all of history", () => {
+  const now = Date.parse("2026-08-15T12:00:00Z")
+  for (const empty of [null, undefined, 0]) {
+    const url = Model.fdsnUrl({ minMagnitude: 2.5, nowMs: now, updatedAfter: empty })
+    assert.match(url, /starttime=2026-08-14T12%3A00%3A00Z/)
+    assert.doesNotMatch(url, /updatedafter=/)
+    assert.doesNotMatch(url, /1970/)
+  }
+})
+
 const DAY_MS = 24 * 60 * 60 * 1000
 

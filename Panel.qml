@@ -473,9 +473,29 @@ Panel {
       root.bar.centerHoverRevealSuppressed = value
   }
 
+  // The cached events were fetched under the previous query. An incremental
+  // poll only asks for what changed since the last fetch, so it would never
+  // return the events the new query newly covers — widening the radius or
+  // dropping the minimum magnitude would leave the list untouched until a
+  // day of polling churned it over. Drop the incremental cursor so the next
+  // fetch re-reads the whole day window.
+  //
+  // rawEvents is deliberately kept: the client-side filter already hides
+  // whatever no longer matches, so the list stays populated instead of
+  // blanking to "Fetching earthquakes…" on every settings tweak. seenIds is
+  // kept for the same reason it is seeded at all — re-seeding here would
+  // swallow a live alert that only just came into range.
+  function resetFeedWindow() {
+    lastPollMs = 0
+    fetchRetries = 0
+    retryTimer.stop()
+  }
+
   onFetchKeyChanged: {
     applyFilter()
-    if (initialized) Qt.callLater(refresh)
+    if (!initialized) return
+    resetFeedWindow()
+    Qt.callLater(refresh)
   }
 
   // Kick off the first poll once the bar has injected the real settings.
@@ -945,7 +965,9 @@ Panel {
                 width: parent.width / 2 - Style.space(6)
                 spacing: Style.space(4)
                 Text {
-                  text: "RANGE KM"
+                  // The radius only filters in local scope, so say so rather
+                  // than letting the field look like it had no effect.
+                  text: root.scope === "local" ? "RANGE KM" : "RANGE KM · LOCAL ONLY"
                   color: root.dim
                   font.family: root.contentFontFamily
                   font.pixelSize: Style.font.caption
@@ -953,6 +975,7 @@ Panel {
                 }
                 TextField {
                   id: settingsRangeField
+                  opacity: root.scope === "local" ? 1 : 0.5
                   width: parent.width
                   foreground: root.contentForeground
                   font.family: root.contentFontFamily
