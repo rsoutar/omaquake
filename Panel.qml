@@ -174,6 +174,7 @@ Panel {
     // and schedule the next poll against the server's cache. -f is dropped:
     // we need the status code (429 etc.) to back off sensibly.
     fetchProc.running = false
+    fetchOut.overflow = false
     fetchProc.command = ["curl", "-sS", "-i", "--max-time", "10", urls[0]]
     fetchProc.running = true
   }
@@ -215,6 +216,7 @@ Panel {
   function resolveLocation() {
     if (locateProc.running) return
     locating = true
+    locateOut.overflow = false
     locateProc.running = true
   }
 
@@ -306,6 +308,7 @@ Panel {
 
   function startGeocode() {
     geocodeActiveQuery = geocodePendingQuery
+    geocodeOut.overflow = false
     geocodeProc.command = ["curl", "-fsS", "--max-time", "5",
       "https://geocoding-api.open-meteo.com/v1/search?name="
         + encodeURIComponent(geocodeActiveQuery) + "&count=5&language=en&format=json"]
@@ -404,6 +407,25 @@ Panel {
   function cycleUnits() {
     var current = Model.normalizeUnits(setting("units", "auto"))
     persistSettings({ units: current === "auto" ? "km" : (current === "km" ? "mi" : "auto") })
+  }
+
+  // Hard ceiling on how much of one response the shell will hold. curl is
+  // killed the moment the cap is crossed, so a hostile endpoint cannot
+  // balloon shell memory; handlers check `overflow` and take their error
+  // path instead of parsing a truncated body.
+  component CappedCollector: StdioCollector {
+    id: capped
+    property var proc: null
+    property int maxBytes: 262144
+    property bool overflow: false
+    waitForEnd: true
+
+    onTextChanged: {
+      if (!capped.overflow && capped.text.length >= capped.maxBytes) {
+        capped.overflow = true
+        if (capped.proc && capped.proc.running) capped.proc.signal(15)
+      }
+    }
   }
 
   component KeyCap: BorderSurface {
@@ -509,10 +531,16 @@ Panel {
 
   Process {
     id: fetchProc
-    stdout: StdioCollector {
-      waitForEnd: true
+    stdout: CappedCollector {
+      id: fetchOut
+      proc: fetchProc
+      maxBytes: 2097152
       onStreamFinished: {
         root.refreshing = false
+        if (overflow) {
+          root.handleHttpError(null)
+          return
+        }
         var http = Model.parseHttpResponse(text)
         var body = String(http.body || "").replace(/^\s+|\s+$/g, "")
         if (http.status >= 400 || !body) {
@@ -527,10 +555,15 @@ Panel {
   Process {
     id: locateProc
     command: ["curl", "-fsS", "--max-time", "8", "https://get.geojs.io/v1/ip/geo.json"]
-    stdout: StdioCollector {
-      waitForEnd: true
+    stdout: CappedCollector {
+      id: locateOut
+      proc: locateProc
       onStreamFinished: {
         root.locating = false
+        if (overflow) {
+          if (!root.autoResolved) root.autoError = "Could not determine location"
+          return
+        }
         var parsed = Model.parseGeoJs(text)
         if (parsed.error) {
           root.autoError = parsed.error
@@ -552,9 +585,15 @@ Panel {
 
   Process {
     id: geocodeProc
-    stdout: StdioCollector {
-      waitForEnd: true
+    stdout: CappedCollector {
+      id: geocodeOut
+      proc: geocodeProc
       onStreamFinished: {
+        if (overflow) {
+          root.locationSuggestions = []
+          root.suggestionIndex = 0
+          return
+        }
         root.locationSuggestions = root.editingLocation ? Model.parseGeocodingResults(text) : []
         root.suggestionIndex = 0
         if (root.geocodePendingQuery !== root.geocodeActiveQuery) Qt.callLater(root.startGeocode)
