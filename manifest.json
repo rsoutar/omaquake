@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "oma.quake",
   "name": "Omaquake",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "author": "rsoutar",
   "license": "MIT",
   "description": "USGS earthquake tracker with a local range filter and desktop alerts.",
